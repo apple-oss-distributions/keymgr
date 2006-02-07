@@ -108,7 +108,7 @@ struct {
   &keymgr_info
 };
 
-#if defined(__ppc__) || defined(__i386__)
+#if defined(__ppc__)
 /* Initialize keymgr.  */
 
 void _init_keymgr (void)
@@ -251,24 +251,16 @@ get_or_create_key_element (unsigned int key, TnodeKind kind,
 	 store of newEntry.  Therefore, since we searched all the
 	 elements from the head at that time, we can be sure that the
 	 entry we're adding is not in the list.  */
-#ifdef __ppc64__
+#ifdef __LP64__
       if (OSAtomicCompareAndSwap64Barrier (
 			   (int64_t) keyArrayStart,
 			   (int64_t) newEntry,
 			   (int64_t *) &__keymgr_global.keymgr_globals))
-#elif defined (__i386__)
-      /* x86 should be the same as ppc, this is Radar 3719334.  */
-      if (OSAtomicCompareAndSwap32 (
-			   (int32_t) keyArrayStart,
-			   (int32_t) newEntry,
-			   (int32_t *) &__keymgr_global.keymgr_globals))
-#elif defined(__ppc__)
+#else
       if (OSAtomicCompareAndSwap32Barrier (
 			   (int32_t) keyArrayStart,
 			   (int32_t) newEntry,
 			   (int32_t *) &__keymgr_global.keymgr_globals))
-#else
-#error unknown pointer size
 #endif
 	{
 	  *result = newEntry;
