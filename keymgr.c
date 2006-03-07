@@ -356,16 +356,14 @@ _keymgr_set_per_thread_data (unsigned int key, void *keydata)
       if ((errnum = pthread_key_create (&pthread_key, destructor)) != 0)
 	return errnum;
 
-#ifdef __ppc64__
+#ifdef __LP64__
       neededInit = OSAtomicCompareAndSwap64 ((int64_t) NULL,
 					     (int64_t) pthread_key,
 					     (int64_t *) &keyArray->ptr);
-#elif defined(__ppc__) || defined (__i386__)
+#else
       neededInit = OSAtomicCompareAndSwap32 ((int32_t) NULL,
 					     (int32_t) pthread_key,
 					     (int32_t *) &keyArray->ptr);
-#else
-#error unknown pointer size
 #endif
       if (!neededInit)
 	pthread_key_delete (pthread_key);
