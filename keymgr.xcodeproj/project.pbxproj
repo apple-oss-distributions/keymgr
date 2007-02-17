@@ -153,7 +153,7 @@
 					debug,
 					profile,
 				);
-				COPY_PHASE_STRIP = NO;
+				DEPLOYMENT_POSTPROCESSING = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				GCC_CW_ASM_SYNTAX = NO;
@@ -164,6 +164,10 @@
 				INSTALL_PATH = /usr/local/lib/system;
 				LIBRARY_STYLE = STATIC;
 				PRODUCT_NAME = keymgr;
+				STRIP_INSTALLED_PRODUCT = "$(STRIP_INSTALLED_PRODUCT_$(CURRENT_VARIANT))";
+				STRIP_INSTALLED_PRODUCT_debug = NO;
+				STRIP_INSTALLED_PRODUCT_normal = YES;
+				STRIP_INSTALLED_PRODUCT_profile = NO;
 				WARNING_CFLAGS = "-Wmost";
 			};
 			name = Default;

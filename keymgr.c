@@ -37,6 +37,7 @@ Software Foundation, 59 Temple Place - Suite 330, Boston, MA
  */
 
 #include <mach-o/dyld.h>
+#include <dlfcn.h>
 #include <pthread.h>
 #include <errno.h>
 #include <stdlib.h>
@@ -44,14 +45,25 @@ Software Foundation, 59 Temple Place - Suite 330, Boston, MA
 #include <stdint.h>
 #include "keymgr.h"
 
+/* On x86 or later platforms, there's no need to support the TLS SPIs.
+   The only reason to support them on ppc64 is because the tools
+   shipped with Tiger included a libsupc++.a which used these
+   functions.  (To do: investigate whether anyone ever actually used
+   that library for ppc64.)  */
+#if defined(__ppc__) || defined(__ppc64__)
+#define WANT_TLS_SPIS 1
+#endif
+
 #ifndef ESUCCESS
 #define ESUCCESS 0
 #endif
 
 /* Types of node, used for error checking.  */
 typedef enum node_kinds {
-  NODE_THREAD_SPECIFIC_DATA=1,
-  NODE_PROCESSWIDE_PTR
+  NODE_PROCESSWIDE_PTR=1,
+#ifdef WANT_TLS_SPIS
+  NODE_THREAD_SPECIFIC_DATA
+#endif
 } TnodeKind;
 
 /* These values are internal; the subflags of NM_ENHANCED_LOCKING are
@@ -279,6 +291,7 @@ get_or_create_key_element (unsigned int key, TnodeKind kind,
     }
 }
 
+#ifdef WANT_TLS_SPIS
 /* Return the data associated with KEY for the current thread.
    Return NULL if there is no such data.  */
 
@@ -373,6 +386,7 @@ _keymgr_set_per_thread_data (unsigned int key, void *keydata)
 
   return pthread_setspecific (pthread_key, keydata);
 }
+#endif /* WANT_TLS_SPIS */
 
 
 /*
@@ -726,10 +740,10 @@ dwarf2_unwind_dyld_remove_image_hook (const struct mach_header *mh,
 	  {
 	    if (! was_in_object && (*lip)->destructor != prev_destructor)
 	      {
+		Dl_info info;
 		prev_destructor = (*lip)->destructor;
-		was_in_object = ((_dyld_get_image_header_containing_address
-				  (prev_destructor))
-				 == mh);
+		was_in_object = (dladdr (prev_destructor, &info) != 0
+				 && info.dli_fbase == mh);
 	      }
 	    if ((*lip)->destructor == prev_destructor && was_in_object)
 	      (*lip)->destructor (*lip);
@@ -762,10 +776,20 @@ dwarf2_unwind_dyld_remove_image_hook (const struct mach_header *mh,
   }
 }
 
-/* __keymgr_dwarf2_register_sections is called by crt1.  */
 
 void __keymgr_dwarf2_register_sections (void)
 {
+  /* This function needs to remain for binary compatibiliity */
+  /* with old programs which were linked with a crt1.o that */
+  /* explicitly called __keymgr_dwarf2_register_sections() */
+}
+
+
+/* call by libSystem's initializer */
+void __attribute__((visibility("hidden"))) __keymgr_initializer (void)
+{
+  /* register with dyld so that we are notified about all loaded mach-o images */
   _dyld_register_func_for_add_image (dwarf2_unwind_dyld_add_image_hook);
   _dyld_register_func_for_remove_image (dwarf2_unwind_dyld_remove_image_hook);
 }
+
